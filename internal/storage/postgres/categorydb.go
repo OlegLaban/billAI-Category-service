@@ -25,57 +25,48 @@ func NewCategoryDb(dsn string) (*CategoryDB, error) {
 	return &CategoryDB{Db: db}, nil
 }
 
+func (c *CategoryDB) CreateDefaultCategories(ctx context.Context, userID uuid.UUID) error {
+	query := `INSERT INTO categories (user_id, category_name) VALUES
+	($1, 'Продукты питания'),
+    ($1, 'Кафе и рестораны'),
+    ($1, 'Для дома и бытовая химия'),
+    ($1, 'Здоровье и принадлежности для ухода'),
+    ($1, 'Транспорт'),
+    ($1, 'Одежда и обувь'),
+    ($1, 'Развлечения и хобби'),
+    ($1, 'Образование'),
+    ($1, 'Домашние животные'),
+    ($1, 'Техника и электронника'),
+    ($1, 'Жилье и коммунальные услуги'),
+    ($1, 'Путешествия')`
+	_, err := c.Db.ExecContext(ctx, query, userID)
+	if err != nil {
+		return fmt.Errorf("failed to create default categories: %w", err)
+	}
+	return nil
+}
+
 func (c *CategoryDB) GetUserCategories(ctx context.Context, userID uuid.UUID) (*[]models.Category, error) {
-	var categories []models.Category
-	query := `SELECT * FROM categories WHERE user_id IS NULL OR user_id = $1`
+	query := `SELECT category_name FROM categories
+	WHERE user_id = $1`
 	rows, err := c.Db.QueryContext(ctx, query, userID)
 	if err != nil {
-		return nil, fmt.Errorf("failed to query categories: %w", err)
+		return nil, fmt.Errorf("query failed: %w", err)
 	}
 	defer rows.Close()
+	var categories []models.Category
 	for rows.Next() {
 		var cat models.Category
-		err := rows.Scan(&cat.ID, &cat.UserID, &cat.Name, &cat.IsDefault)
+		err := rows.Scan(&cat.Name)
 		if err != nil {
-			return nil, fmt.Errorf("failed to scan row: %w", err)
+			return nil, fmt.Errorf("scan failed: %w", err)
 		}
 		categories = append(categories, cat)
 	}
 	if err := rows.Err(); err != nil {
-		return nil, fmt.Errorf("rows iteration error: %w", err)
+		return nil, fmt.Errorf("iteration failed: %v", err)
 	}
 	return &categories, nil
-}
-
-func (c *CategoryDB) GetDefaultCategories(ctx context.Context) (*[]models.Category, error) {
-	var categories []models.Category
-	query := `SELECT * FROM categories WHERE user_id IS NULL`
-	rows, err := c.Db.QueryContext(ctx, query)
-	if err != nil {
-		return nil, fmt.Errorf("failed to query categories: %w", err)
-	}
-	defer rows.Close()
-	for rows.Next() {
-		var cat models.Category
-		err := rows.Scan(&cat.ID, &cat.UserID, &cat.Name, &cat.IsDefault)
-		if err != nil {
-			return nil, fmt.Errorf("failed to scan row: %w", err)
-		}
-		categories = append(categories, cat)
-	}
-	if err = rows.Err(); err != nil {
-		return nil, fmt.Errorf("rows iteration error: %w", err)
-	}
-	return &categories, nil
-}
-
-func (c *CategoryDB) AddDefaultCategory(ctx context.Context, name string) error {
-	query := `INSERT INTO categories (category_name) VALUES ($1)`
-	_, err := c.Db.ExecContext(ctx, query, name)
-	if err != nil {
-		return fmt.Errorf("failed to add category: %w", err)
-	}
-	return nil
 }
 
 func (c *CategoryDB) Close() error {

@@ -3,24 +3,27 @@ package service
 import (
 	"context"
 	"fmt"
-	"strings"
 
 	"github.com/OlegLaban/billAI-Category-service/internal/models"
 	"github.com/google/uuid"
 )
 
 type CategoryRepository interface {
+	CreateDefaultCategories(ctx context.Context, userID uuid.UUID) error
 	GetUserCategories(ctx context.Context, userID uuid.UUID) (*[]models.Category, error)
-	AddDefaultCategory(ctx context.Context, name string) error
-	GetDefaultCategories(ctx context.Context) (*[]models.Category, error)
+}
+
+type CategoryBroker interface {
+	SubscribeUserCreated(ctx context.Context, handler func(context.Context, uuid.UUID) error) error
 }
 
 type CategoryService struct {
 	CategoryRepo CategoryRepository
+	Broker       CategoryBroker
 }
 
-func NewCategoryService(cr CategoryRepository) *CategoryService {
-	return &CategoryService{CategoryRepo: cr}
+func NewCategoryService(cr CategoryRepository, cb CategoryBroker) *CategoryService {
+	return &CategoryService{CategoryRepo: cr, Broker: cb}
 }
 
 func (cs *CategoryService) GetUserCategories(ctx context.Context, userID uuid.UUID) (*[]models.Category, error) {
@@ -31,20 +34,6 @@ func (cs *CategoryService) GetUserCategories(ctx context.Context, userID uuid.UU
 	return categories, nil
 }
 
-func (cs *CategoryService) AddCategory(ctx context.Context, name string) error {
-	name = strings.Join(strings.Fields(name), " ")
-	categories, err := cs.CategoryRepo.GetDefaultCategories(ctx)
-	if err != nil {
-		return fmt.Errorf("error in db to get default categories: %w", err)
-	}
-	for _, cat := range *categories {
-		if strings.EqualFold(cat.Name, name) {
-			return fmt.Errorf("category already exist")
-		}
-	}
-	if err := cs.CategoryRepo.AddDefaultCategory(ctx, name); err != nil {
-		return fmt.Errorf("failed to add category: %w", err)
-	}
-
-	return nil
+func (cs *CategoryService) HandleUserCreated(ctx context.Context, userID uuid.UUID) error {
+	return cs.CategoryRepo.CreateDefaultCategories(ctx, userID)
 }
