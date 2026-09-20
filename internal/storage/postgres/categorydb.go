@@ -47,7 +47,7 @@ func (c *CategoryDB) CreateDefaultCategories(ctx context.Context, userID uuid.UU
 }
 
 func (c *CategoryDB) GetUserCategories(ctx context.Context, userID uuid.UUID) (*[]models.Category, error) {
-	query := `SELECT category_name FROM categories
+	query := `SELECT id, user_id, category_name FROM categories
 	WHERE user_id = $1`
 	rows, err := c.Db.QueryContext(ctx, query, userID)
 	if err != nil {
@@ -57,7 +57,7 @@ func (c *CategoryDB) GetUserCategories(ctx context.Context, userID uuid.UUID) (*
 	var categories []models.Category
 	for rows.Next() {
 		var cat models.Category
-		err := rows.Scan(&cat.Name)
+		err := rows.Scan(&cat.Id, &cat.UserID, &cat.Name)
 		if err != nil {
 			return nil, fmt.Errorf("scan failed: %w", err)
 		}

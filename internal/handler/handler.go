@@ -2,12 +2,12 @@ package handler
 
 import (
 	"encoding/json"
-	"fmt"
 	"log"
 	"net/http"
 
 	"github.com/OlegLaban/billAI-Category-service/internal/models"
 	"github.com/OlegLaban/billAI-Category-service/internal/service"
+	"github.com/go-chi/chi/v5"
 	"github.com/google/uuid"
 )
 
@@ -21,15 +21,16 @@ func NewHandler(cs *service.CategoryService) *Handler {
 	}
 }
 
-func (h *Handler) RegisterRoute(mux *http.ServeMux) {
-	mux.HandleFunc("/load", h.LoadBaseCategories)
+func (h *Handler) RegisterRoute() chi.Router {
+	r := chi.NewRouter()
+
+	r.Get("/load", h.LoadBaseCategories)
+
+	return r
 }
 
 func (h *Handler) LoadBaseCategories(w http.ResponseWriter, r *http.Request) {
-	if r.Method != http.MethodGet {
-		http.Error(w, "Error in method, except get", http.StatusMethodNotAllowed)
-		return
-	}
+
 	userID, err := uuid.Parse(r.Header.Get("X-UserID"))
 	if err != nil {
 		log.Printf("error to parse id: %v", err)
@@ -44,11 +45,9 @@ func (h *Handler) LoadBaseCategories(w http.ResponseWriter, r *http.Request) {
 	type response struct {
 		Categories *[]models.Category `json:"categories"`
 	}
-	fmt.Println(categories)
 	resp := response{
 		Categories: categories,
 	}
 	w.Header().Set("Content-Type", "application/json")
 	json.NewEncoder(w).Encode(resp)
-
 }

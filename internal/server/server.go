@@ -1,12 +1,14 @@
 package server
 
 import (
+	"context"
 	"fmt"
 	"log"
 	"net/http"
 
 	"github.com/OlegLaban/billAI-Category-service/internal/handler"
 	"github.com/OlegLaban/billAI-Category-service/internal/service"
+	"github.com/go-chi/chi/v5"
 )
 
 type Server struct {
@@ -14,13 +16,14 @@ type Server struct {
 }
 
 func NewServer(cs *service.CategoryService, port string) *Server {
-	mux := http.NewServeMux()
-	handler := handler.NewHandler(cs)
-	handler.RegisterRoute(mux)
+	r := chi.NewRouter()
+	categoryHandler := handler.NewHandler(cs)
+
+	r.Mount("/", categoryHandler.RegisterRoute())
 	return &Server{
 		server: &http.Server{
 			Addr:    ":" + port,
-			Handler: mux,
+			Handler: r,
 		},
 	}
 }
@@ -31,6 +34,10 @@ func (s *Server) Start() error {
 		return fmt.Errorf("server failed: %w", err)
 	}
 	return nil
+}
+
+func (s *Server) Shutdown(ctx context.Context) error {
+	return s.server.Shutdown(ctx)
 }
 
 func (s *Server) Close() error {
