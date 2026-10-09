@@ -21,10 +21,12 @@ func main() {
 	if err != nil {
 		log.Fatalf("failed to load DB: %v", err)
 	}
+	defer categoryDB.Close()
 	broker, err := broker.NewRedisBroker(cfg.RedisDSN)
 	if err != nil {
 		log.Fatalf("failed to load redis broker: %v", err)
 	}
+	defer broker.Close()
 	categoryService := service.NewCategoryService(categoryDB, broker)
 	go func() {
 		err = broker.SubscribeUserCreated(context.Background(), categoryService.HandleUserCreated)

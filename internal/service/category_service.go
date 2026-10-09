@@ -4,13 +4,14 @@ import (
 	"context"
 	"fmt"
 
+	internalerrors "github.com/OlegLaban/billAI-Category-service/internal/internal_errors"
 	"github.com/OlegLaban/billAI-Category-service/internal/models"
 	"github.com/google/uuid"
 )
 
 type CategoryRepository interface {
 	CreateDefaultCategories(ctx context.Context, userID uuid.UUID) error
-	GetUserCategories(ctx context.Context, userID uuid.UUID) (*[]models.Category, error)
+	GetUserCategories(ctx context.Context, userID uuid.UUID) ([]models.Category, error)
 }
 
 type CategoryBroker interface {
@@ -26,10 +27,13 @@ func NewCategoryService(cr CategoryRepository, cb CategoryBroker) *CategoryServi
 	return &CategoryService{CategoryRepo: cr, Broker: cb}
 }
 
-func (cs *CategoryService) GetUserCategories(ctx context.Context, userID uuid.UUID) (*[]models.Category, error) {
+func (cs *CategoryService) GetUserCategories(ctx context.Context, userID uuid.UUID) ([]models.Category, error) {
 	categories, err := cs.CategoryRepo.GetUserCategories(ctx, userID)
-	if err != nil || categories == nil {
+	if err != nil {
 		return nil, fmt.Errorf("failed to get all categories: %w", err)
+	}
+	if categories == nil {
+		return nil, internalerrors.ErrorUserNotFound
 	}
 	return categories, nil
 }

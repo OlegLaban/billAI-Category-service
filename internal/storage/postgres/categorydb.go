@@ -46,7 +46,7 @@ func (c *CategoryDB) CreateDefaultCategories(ctx context.Context, userID uuid.UU
 	return nil
 }
 
-func (c *CategoryDB) GetUserCategories(ctx context.Context, userID uuid.UUID) (*[]models.Category, error) {
+func (c *CategoryDB) GetUserCategories(ctx context.Context, userID uuid.UUID) ([]models.Category, error) {
 	query := `SELECT id, user_id, category_name FROM categories
 	WHERE user_id = $1`
 	rows, err := c.Db.QueryContext(ctx, query, userID)
@@ -66,7 +66,7 @@ func (c *CategoryDB) GetUserCategories(ctx context.Context, userID uuid.UUID) (*
 	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("iteration failed: %v", err)
 	}
-	return &categories, nil
+	return categories, nil
 }
 
 func (c *CategoryDB) Close() error {
