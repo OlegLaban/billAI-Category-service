@@ -1,17 +1,20 @@
-name: check
+name: GetCode
 
 on: 
-  push:
+  push: 
     branches: [main]
-  pull_request:
+  pull_request: 
 
 jobs:
-  say-hello:
+  check:
     runs-on: ubuntu-latest
     steps:
-      - name: Print_Greeting
-        run: echo "HELLO FROM CI"
-      - name: Check directory
+      - name: Get Code
+        uses: actions/checkout@v7
+      - name: Run command
+        run: ls -la
+      - name: Run a check
         run: |
-          pwd
-          ls -la
+          echo "Branch: &GITHUB_REF_NAME"
+          echo "Commit: &GITHUB_SHA"
+  
