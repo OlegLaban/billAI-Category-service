@@ -15,6 +15,6 @@ jobs:
         run: ls -la
       - name: Run a check
         run: |
-          echo "Branch: &GITHUB_REF_NAME"
-          echo "Commit: &GITHUB_SHA"
+          echo "Branch: $GITHUB_REF_NAME"
+          echo "Commit: $GITHUB_SHA"
   
