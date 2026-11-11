@@ -17,6 +17,4 @@ jobs:
         run: |
           echo "Branch: $GITHUB_REF_NAME"
           echo "Commit: $GITHUB_SHA"
-      - name: Run exit
-        run: exit 1
   
