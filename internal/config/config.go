@@ -10,7 +10,6 @@ import (
 type Config struct {
 	PostgresDSN string `env:"POSTGRES_DSN,required"`
 	HttpPort    string `env:"HTTP_PORT,required"`
-	RedisDSN    string `env:"REDIS_DSN,required"`
 }
 
 func LoadConfig() (*Config, error) {

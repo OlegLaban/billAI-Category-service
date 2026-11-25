@@ -16,9 +16,7 @@ services:
       interval: 5s
       timeout: 5s
       retries: 5
-    networks:
-      - shared-network
-        
+
   category-service:
     build: 
       context: ./
@@ -31,13 +29,7 @@ services:
     depends_on:
       postgres-category:
         condition: service_healthy
-    networks:
-      - shared-network
-
+        
 volumes:
   category_postgres_data:
 
-networks:
-  shared-network:
-    name: shared-broker-net
-    external: true

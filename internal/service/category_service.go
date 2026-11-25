@@ -3,6 +3,8 @@ package service
 import (
 	"context"
 	"fmt"
+	"strings"
+	"unicode"
 
 	internalerrors "github.com/OlegLaban/billAI-Category-service/internal/internal_errors"
 	"github.com/OlegLaban/billAI-Category-service/internal/models"
@@ -10,21 +12,17 @@ import (
 )
 
 type CategoryRepository interface {
-	CreateDefaultCategories(ctx context.Context, userID uuid.UUID) error
 	GetUserCategories(ctx context.Context, userID uuid.UUID) ([]models.Category, error)
-}
-
-type CategoryBroker interface {
-	SubscribeUserCreated(ctx context.Context, handler func(context.Context, uuid.UUID) error) error
+	AddDefaultCategory(ctx context.Context, category string) error
+	CheckDefaultCategoryName(ctx context.Context, category string) (bool, error)
 }
 
 type CategoryService struct {
 	CategoryRepo CategoryRepository
-	Broker       CategoryBroker
 }
 
-func NewCategoryService(cr CategoryRepository, cb CategoryBroker) *CategoryService {
-	return &CategoryService{CategoryRepo: cr, Broker: cb}
+func NewCategoryService(cr CategoryRepository) *CategoryService {
+	return &CategoryService{CategoryRepo: cr}
 }
 
 func (cs *CategoryService) GetUserCategories(ctx context.Context, userID uuid.UUID) ([]models.Category, error) {
@@ -38,6 +36,21 @@ func (cs *CategoryService) GetUserCategories(ctx context.Context, userID uuid.UU
 	return categories, nil
 }
 
-func (cs *CategoryService) HandleUserCreated(ctx context.Context, userID uuid.UUID) error {
-	return cs.CategoryRepo.CreateDefaultCategories(ctx, userID)
+func (cs *CategoryService) AddDefaultCategory(ctx context.Context, category string) error {
+	arr := strings.Fields(category)
+	category = strings.Join(arr, " ")
+	runes := []rune(category)
+	runes[0] = unicode.ToUpper(runes[0])
+	category = string(runes)
+	exists, err := cs.CategoryRepo.CheckDefaultCategoryName(ctx, category)
+	if err != nil {
+		return fmt.Errorf("failed in categorydb: %w", err)
+	}
+	if !exists {
+		if err := cs.CategoryRepo.AddDefaultCategory(ctx, category); err != nil {
+			return fmt.Errorf("failed in categorydb: %w", err)
+		}
+		return nil
+	}
+	return internalerrors.ErrorCategoryExist
 }

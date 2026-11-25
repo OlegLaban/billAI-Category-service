@@ -14,4 +14,4 @@ WORKDIR /app
 
 COPY --from=builder /app/category-service .
 
-CMD [ "./category-service" ]
+ENTRYPOINT [ "./category-service" ]

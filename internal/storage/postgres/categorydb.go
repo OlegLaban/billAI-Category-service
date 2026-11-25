@@ -25,30 +25,9 @@ func NewCategoryDb(dsn string) (*CategoryDB, error) {
 	return &CategoryDB{Db: db}, nil
 }
 
-func (c *CategoryDB) CreateDefaultCategories(ctx context.Context, userID uuid.UUID) error {
-	query := `INSERT INTO categories (user_id, category_name) VALUES
-	($1, 'Продукты питания'),
-    ($1, 'Кафе и рестораны'),
-    ($1, 'Для дома и бытовая химия'),
-    ($1, 'Здоровье и принадлежности для ухода'),
-    ($1, 'Транспорт'),
-    ($1, 'Одежда и обувь'),
-    ($1, 'Развлечения и хобби'),
-    ($1, 'Образование'),
-    ($1, 'Домашние животные'),
-    ($1, 'Техника и электронника'),
-    ($1, 'Жилье и коммунальные услуги'),
-    ($1, 'Путешествия')`
-	_, err := c.Db.ExecContext(ctx, query, userID)
-	if err != nil {
-		return fmt.Errorf("failed to create default categories: %w", err)
-	}
-	return nil
-}
-
 func (c *CategoryDB) GetUserCategories(ctx context.Context, userID uuid.UUID) ([]models.Category, error) {
 	query := `SELECT id, user_id, category_name FROM categories
-	WHERE user_id = $1`
+	WHERE user_id = $1 OR is_default = true`
 	rows, err := c.Db.QueryContext(ctx, query, userID)
 	if err != nil {
 		return nil, fmt.Errorf("query failed: %w", err)
@@ -57,7 +36,7 @@ func (c *CategoryDB) GetUserCategories(ctx context.Context, userID uuid.UUID) ([
 	var categories []models.Category
 	for rows.Next() {
 		var cat models.Category
-		err := rows.Scan(&cat.Id, &cat.UserID, &cat.Name)
+		err := rows.Scan(&cat.Id, &cat.UserID, &cat.Name, &cat.IsDefault)
 		if err != nil {
 			return nil, fmt.Errorf("scan failed: %w", err)
 		}
@@ -67,6 +46,27 @@ func (c *CategoryDB) GetUserCategories(ctx context.Context, userID uuid.UUID) ([
 		return nil, fmt.Errorf("iteration failed: %v", err)
 	}
 	return categories, nil
+}
+
+func (c *CategoryDB) CheckDefaultCategoryName(ctx context.Context, category string) (bool, error) {
+	var exists bool
+	query := `SELECT EXISTS(SELECT 1 FROM categories
+	WHERE category_name = $1 AND is_default=true)`
+	err := c.Db.QueryRowContext(ctx, query, category).Scan(&exists)
+	if err != nil {
+		return false, fmt.Errorf("failed to check category: %w", err)
+	}
+	return exists, nil
+
+}
+
+func (c *CategoryDB) AddDefaultCategory(ctx context.Context, category string) error {
+	query := `INSERT INTO categories (category_name, is_default) VALUES($1, $2)`
+	_, err := c.Db.ExecContext(ctx, query, category, true)
+	if err != nil {
+		return fmt.Errorf("failed to add default category: %w", err)
+	}
+	return nil
 }
 
 func (c *CategoryDB) Close() error {

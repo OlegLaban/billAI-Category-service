@@ -3,8 +3,8 @@ package main
 import (
 	"context"
 	"log"
+	"os"
 
-	"github.com/OlegLaban/billAI-Category-service/internal/broker"
 	"github.com/OlegLaban/billAI-Category-service/internal/config"
 	"github.com/OlegLaban/billAI-Category-service/internal/server"
 	"github.com/OlegLaban/billAI-Category-service/internal/service"
@@ -22,20 +22,17 @@ func main() {
 		log.Fatalf("failed to load DB: %v", err)
 	}
 	defer categoryDB.Close()
-	broker, err := broker.NewRedisBroker(cfg.RedisDSN)
-	if err != nil {
-		log.Fatalf("failed to load redis broker: %v", err)
-	}
-	defer broker.Close()
-	categoryService := service.NewCategoryService(categoryDB, broker)
-	go func() {
-		err = broker.SubscribeUserCreated(context.Background(), categoryService.HandleUserCreated)
-		if err != nil {
-			log.Fatal(err)
+	categoryService := service.NewCategoryService(categoryDB)
+	if len(os.Args) == 2 {
+		if err = categoryService.AddDefaultCategory(context.Background(), os.Args[1]); err != nil {
+			log.Fatalf("failed to add category: %v", err)
 		}
-	}()
-	server := server.NewServer(categoryService, cfg.HttpPort)
-	if err = server.Start(); err != nil {
-		log.Fatalf("error in server: %v", err)
+	} else if len(os.Args) > 2 {
+		log.Fatal("error: should be 1 args: example ./category_service Путешествия")
+	} else {
+		server := server.NewServer(categoryService, cfg.HttpPort)
+		if err := server.Start(); err != nil {
+			log.Fatalf("failed to start server: %v", err)
+		}
 	}
 }
